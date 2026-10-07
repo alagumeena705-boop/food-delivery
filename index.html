@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gather & Go — Continental Kitchen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --ink: #202923;
+      --muted: #788078;
+      --cream: #f8f7f2;
+      --white: #fff;
+      --green: #294c3b;
+      --green-light: #e9efe8;
+      --orange: #e8884a;
+      --line: #e9e8e1;
+      --shadow: 0 12px 35px rgba(38, 50, 42, .08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--cream); color: var(--ink); font-family: "DM Sans", sans-serif; }
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .wrap { max-width: 1240px; margin: auto; padding: 0 28px; }
+    header { height: 76px; background: rgba(248,247,242,.95); border-bottom: 1px solid var(--line); display: flex; align-items: center; }
+    .nav { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: -.5px; }
+    .brand-mark { width: 35px; height: 35px; display: grid; place-items: center; background: var(--green); color: white; border-radius: 12px; }
+    .nav-note { color: var(--muted); font-size: 13px; }
+    .hero { padding: 44px 0 34px; display: grid; grid-template-columns: 1.15fr .85fr; gap: 25px; align-items: center; }
+    .eyebrow { color: #b46c3e; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; font-size: 11px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font: 700 clamp(38px, 5vw, 60px)/1.07 "Playfair Display", serif; letter-spacing: -1.8px; margin: 12px 0 15px; max-width: 610px; }
+    .hero p { color: var(--muted); max-width: 490px; line-height: 1.7; margin-bottom: 20px; }
+    .hero-pills { display: flex; gap: 9px; flex-wrap: wrap; }
+    .pill { padding: 9px 13px; border: 1px solid var(--line); background: white; border-radius: 30px; font-size: 12px; color: #59645b; }
+    .hero-card { min-height: 210px; border-radius: 22px; padding: 23px; background: linear-gradient(135deg,#355844,#203b2d); color: white; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; box-shadow: var(--shadow); }
+    .hero-card::before { content: "🍝"; position: absolute; font-size: 120px; right: 20px; top: 7px; opacity: .95; transform: rotate(-10deg); }
+    .hero-card::after { content: ""; position: absolute; width: 185px; height: 185px; right: 0; top: 5px; background: rgba(255,255,255,.1); border-radius: 50%; }
+    .hero-card > * { position: relative; z-index: 1; }
+    .hero-card small { color: #d9e3d9; }
+    .hero-card strong { font: 600 25px "Playfair Display", serif; margin: 6px 0; }
+    .content { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 25px; align-items: start; padding-bottom: 50px; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 15px; margin-bottom: 19px; }
+    h2 { font: 600 29px "Playfair Display", serif; margin-bottom: 4px; }
+    .sub { color: var(--muted); font-size: 13px; }
+    .search { position: relative; }
+    .search input { width: 225px; padding: 11px 14px 11px 37px; border: 1px solid var(--line); border-radius: 12px; background: white; outline: none; }
+    .search span { position: absolute; left: 13px; top: 10px; color: var(--muted); }
+    .categories { display: flex; overflow: auto; gap: 8px; margin-bottom: 20px; padding-bottom: 2px; }
+    .cat { border: 1px solid var(--line); background: white; border-radius: 30px; padding: 9px 15px; color: #616b62; white-space: nowrap; font-size: 12px; }
+    .cat.active { background: var(--green); color: white; border-color: var(--green); }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .dish { background: white; border: 1px solid #efeee8; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(20,30,20,.025); transition: transform .2s, box-shadow .2s; }
+    .dish:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .dish-art { height: 132px; display: grid; place-items: center; font-size: 66px; background: linear-gradient(135deg,#f5eee1,#f8e6d7); position: relative; }
+    .dish:nth-child(3n + 2) .dish-art { background: linear-gradient(135deg,#e6eee2,#f2ead8); }
+    .dish:nth-child(3n) .dish-art { background: linear-gradient(135deg,#f2e4dc,#f6efdf); }
+    .tag { position: absolute; left: 10px; top: 10px; font-size: 10px; font-weight: 700; color: var(--green); background: white; padding: 6px 9px; border-radius: 20px; }
+    .dish-info { padding: 13px; }
+    .dish-title { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+    .dish h3 { font-size: 14px; line-height: 1.3; margin: 0 0 5px; }
+    .price { color: var(--green); font-weight: 700; font-size: 13px; white-space: nowrap; }
+    .dish-info p { color: var(--muted); font-size: 11px; line-height: 1.45; min-height: 32px; margin: 3px 0 12px; }
+    .dish-bottom { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 10px; }
+    .add-btn { border: 0; border-radius: 9px; background: var(--green-light); color: var(--green); width: 31px; height: 31px; font-size: 19px; font-weight: 600; }
+    .add-btn:hover { background: var(--green); color: white; }
+    .side { position: sticky; top: 18px; }
+    .panel { background: white; border: 1px solid #efeee8; border-radius: 17px; padding: 19px; box-shadow: var(--shadow); }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+    .panel-head h2 { font: 600 20px "Playfair Display", serif; margin: 0; }
+    .count { border-radius: 20px; background: var(--green-light); color: var(--green); padding: 5px 9px; font-size: 11px; font-weight: 700; }
+    .empty { text-align: center; padding: 25px 10px; color: var(--muted); font-size: 12px; }
+    .empty span { font-size: 30px; display: block; margin-bottom: 8px; }
+    .cart-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 13px 0; border-bottom: 1px solid #f0efe9; }
+    .cart-row strong { font-size: 12px; }
+    .cart-row small { display: block; color: var(--muted); margin-top: 4px; font-size: 11px; }
+    .qty { display: flex; align-items: center; gap: 8px; }
+    .qty button { width: 23px; height: 23px; border-radius: 7px; border: 1px solid var(--line); background: white; }
+    .qty span { font-size: 11px; }
+    .form { margin-top: 15px; }
+    .form label { display: block; color: #5e685f; font-size: 11px; font-weight: 600; margin: 11px 0 5px; }
+    .form input, .form textarea { width: 100%; border: 1px solid var(--line); border-radius: 9px; background: #fff; padding: 10px; font-size: 12px; outline-color: #9aaf9d; }
+    .form textarea { resize: vertical; min-height: 58px; }
+    .totals { border-top: 1px solid var(--line); margin-top: 15px; padding-top: 12px; }
+    .total-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin: 7px 0; }
+    .total-row.final { color: var(--ink); font-size: 15px; font-weight: 700; margin-top: 12px; }
+    .primary { width: 100%; border: 0; border-radius: 10px; background: var(--green); color: white; padding: 13px; font-size: 13px; font-weight: 700; margin-top: 12px; }
+    .primary:hover { background: #1e3b2c; }
+    .primary:disabled { opacity: .45; cursor: not-allowed; }
+    .tracking { display: none; margin: 20px 0 48px; }
+    .tracking.show { display: block; }
+    .track-card { background: white; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); }
+    .track-top { padding: 18px 21px; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+    .track-top h2 { font-size: 23px; margin: 0 0 4px; }
+    .status { background: #fff2e8; color: #a75d2d; padding: 8px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    #map { height: 310px; width: 100%; background: #e8ede6; }
+    .track-meta { padding: 14px 20px; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; }
+    .track-meta strong { display: block; color: var(--ink); font-size: 13px; margin-top: 4px; }
+    .demo-note { font-size: 10px; color: var(--muted); padding: 0 20px 14px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 20px); background: #202923; color: white; padding: 12px 18px; border-radius: 12px; font-size: 13px; opacity: 0; pointer-events: none; transition: .25s; z-index: 1000; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    footer { border-top: 1px solid var(--line); color: var(--muted); padding: 22px 0; font-size: 11px; }
+    @media (max-width: 900px) {
+      .content { grid-template-columns: 1fr; }
+      .side { position: static; }
+      .grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .hero { grid-template-columns: 1fr .75fr; }
+    }
+    @media (max-width: 620px) {
+      .wrap { padding: 0 16px; }
+      header { height: 64px; }
+      .nav-note { font-size: 11px; }
+      .hero { grid-template-columns: 1fr; padding-top: 30px; }
+      .hero-card { min-height: 160px; }
+      .section-head { align-items: start; flex-direction: column; }
+      .search, .search input { width: 100%; }
+      .grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+      .dish-art { height: 115px; }
+      .dish-info { padding: 10px; }
+      .dish h3 { font-size: 12px; }
+      .track-top { align-items: start; flex-direction: column; }
+      #map { height: 270px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <div class="brand"><span class="brand-mark">G</span> gather & go</div>
+      <div class="nav-note">🍃 Freshly prepared · Delivered with care</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">A little taste of everywhere</div>
+        <h1>Good food, gathered around your table.</h1>
+        <p>Thoughtful continental comfort food, made fresh and brought right to your door. Your next favourite meal is just a few clicks away.</p>
+        <div class="hero-pills">
+          <span class="pill">✦ Continental kitchen</span>
+          <span class="pill">◷ 25–40 min delivery</span>
+          <span class="pill">♡ Made fresh to order</span>
+        </div>
+      </div>
+      <div class="hero-card">
+        <small>THE CHEF'S PICK</small>
+        <strong>Truffle mushroom linguine</strong>
+        <small>Silky, savoury, and made for slow evenings.</small>
+      </div>
+    </section>
+
+    <section class="tracking" id="tracking">
+      <div class="track-card">
+        <div class="track-top">
+          <div>
+            <div class="eyebrow">Your order is on its way</div>
+            <h2>Follow your delivery</h2>
+            <div class="sub" id="orderText">Order confirmed</div>
+          </div>
+          <div class="status" id="status">Preparing your order</div>
+        </div>
+        <div id="map" aria-label="Map showing the simulated courier location"></div>
+        <div class="track-meta">
+          <div>Estimated arrival<strong id="eta">About 20 minutes</strong></div>
+          <div>Courier<strong>Alex · On the way</strong></div>
+          <div>Delivery to<strong id="destinationLabel">Your address</strong></div>
+        </div>
+        <div class="demo-note">Demo tracking: courier movement is simulated for this website preview; it is not a live courier GPS feed.</div>
+      </div>
+    </section>
+
+    <section class="content">
+      <div>
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">From our kitchen</div>
+            <h2>Explore the menu</h2>
+            <div class="sub">Continental favourites, prepared fresh.</div>
+          </div>
+          <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search dishes..." aria-label="Search dishes"></label>
+        </div>
+        <div class="categories" id="categories"></div>
+        <div class="grid" id="menu"></div>
+      </div>
+
+      <aside class="side">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Your order</h2><span class="count" id="cartCount">0 items</span>
+          </div>
+          <div id="cartItems"><div class="empty"><span>🥡</span>Your basket is waiting for something delicious.</div></div>
+          <form class="form" id="checkoutForm">
+            <label for="customerName">Your name</label>
+            <input id="customerName" placeholder="e.g. Jamie Lee" required>
+            <label for="address">Delivery address</label>
+            <textarea id="address" placeholder="Street, area, city" required></textarea>
+            <button class="cat" type="button" id="locateBtn" style="margin-top:9px">◎ Use my location</button>
+          </form>
+          <div class="totals">
+            <div class="total-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
+            <div class="total-row"><span>Delivery</span><span id="delivery">$0.00</span></div>
+            <div class="total-row final"><span>Total</span><span id="total">$0.00</span></div>
+            <button class="primary" id="placeOrder" form="checkoutForm" disabled>Place your order</button>
+            <div class="sub" style="text-align:center;margin-top:9px;font-size:10px">Secure checkout · Payment collected on delivery</div>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer><div class="wrap">Gather & Go · Continental comfort, delivered. <span style="float:right">Demo website — checkout does not process payment.</span></div></footer>
+  <div class="toast" id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const dishes = [
+      { id: 1, name: "Truffle mushroom linguine", category: "Pasta", price: 18.5, emoji: "🍝", tag: "Chef's pick", desc: "Wild mushrooms, parmesan & delicate truffle cream.", time: "20 min" },
+      { id: 2, name: "Herb-roasted chicken", category: "Mains", price: 21, emoji: "🍗", tag: "Bestseller", desc: "Golden roast chicken, garden herbs & lemon jus.", time: "25 min" },
+      { id: 3, name: "Creamy tomato risotto", category: "Vegetarian", price: 17, emoji: "🍚", tag: "Vegetarian", desc: "Slow-stirred arborio rice, tomato & aged parmesan.", time: "22 min" },
+      { id: 4, name: "Classic beef bourguignon", category: "Mains", price: 24, emoji: "🥘", tag: "House favourite", desc: "Slow-braised beef, red wine sauce & buttery mash.", time: "30 min" },
+      { id: 5, name: "Mediterranean salad", category: "Vegetarian", price: 14, emoji: "🥗", tag: "Fresh", desc: "Tomato, cucumber, olives, feta & house vinaigrette.", time: "12 min" },
+      { id: 6, name: "Pesto penne primavera", category: "Pasta", price: 16.5, emoji: "🍲", tag: "Vegetarian", desc: "Basil pesto, seasonal vegetables & toasted pine nuts.", time: "18 min" },
+      { id: 7, name: "Pan-seared salmon", category: "Mains", price: 23, emoji: "🐟", tag: "Gluten-free", desc: "Crisp-skinned salmon, greens & lemon butter.", time: "24 min" },
+      { id: 8, name: "Chocolate fondant", category: "Desserts", price: 9, emoji: "🍰", tag: "Sweet treat", desc: "Warm chocolate cake with a soft centre.", time: "15 min" },
+      { id: 9, name: "Crème brûlée", category: "Desserts", price: 8.5, emoji: "🍮", tag: "Classic", desc: "Vanilla custard finished with a crisp caramel top.", time: "10 min" }
+    ];
+
+    const categories = ["All dishes", "Pasta", "Mains", "Vegetarian", "Desserts"];
+    let activeCategory = "All dishes";
+    let cart = {};
+    let map, courierMarker, destinationMarker, routeLine, courierPath, trackingTimer;
+    let destination = [40.724, -73.991];
+    let courierIndex = 0;
+    const money = n => "$" + n.toFixed(2);
+
+    function renderCategories() {
+      document.getElementById("categories").innerHTML = categories.map(c =>
+        `<button class="cat ${c === activeCategory ? "active" : ""}" data-category="${c}">${c}</button>`
+      ).join("");
+      document.querySelectorAll("[data-category]").forEach(btn => btn.addEventListener("click", () => {
+        activeCategory = btn.dataset.category;
+        renderCategories();
+        renderMenu();
+      }));
+    }
+
+    function renderMenu() {
+      const query = document.getElementById("search").value.toLowerCase().trim();
+      const filtered = dishes.filter(d =>
+        (activeCategory === "All dishes" || d.category === activeCategory) &&
+        (d.name.toLowerCase().includes(query) || d.desc.toLowerCase().includes(query))
+      );
+      document.getElementById("menu").innerHTML = filtered.length ? filtered.map(d => `
+        <article class="dish">
+          <div class="dish-art"><span class="tag">${d.tag}</span>${d.emoji}</div>
+          <div class="dish-info">
+            <div class="dish-title"><h3>${d.name}</h3><span class="price">${money(d.price)}</span></div>
+            <p>${d.desc}</p>
+            <div class="dish-bottom"><span>◷ ${d.time}</span><button class="add-btn" aria-label="Add ${d.name} to cart" data-add="${d.id}">+</button></div>
+          </div>
+        </article>`).join("") : `<div class="sub">No dishes found. Try another search.</div>`;
+      document.querySelectorAll("[data-add]").forEach(btn => btn.addEventListener("click", () => addItem(Number(btn.dataset.add))));
+    }
+
+    function addItem(id) {
+      cart[id] = (cart[id] || 0) + 1;
+      renderCart();
+      showToast("Added to your order");
+    }
+
+    function changeQty(id, delta) {
+      cart[id] = (cart[id] || 0) + delta;
+      if (cart[id] <= 0) delete cart[id];
+      renderCart();
+    }
+
+    function renderCart() {
+      const items = Object.entries(cart);
+      const count = items.reduce((sum, [, qty]) => sum + qty, 0);
+      const subtotal = items.reduce((sum, [id, qty]) => sum + dishes.find(d => d.id === Number(id)).price * qty, 0);
+      const deliveryFee = count ? 3.5 : 0;
+      document.getElementById("cartCount").textContent = `${count} ${count === 1 ? "item" : "items"}`;
+      document.getElementById("cartItems").innerHTML = count ? items.map(([id, qty]) => {
+        const d = dishes.find(x => x.id === Number(id));
+        return `<div class="cart-row">
+          <div><strong>${d.name}</strong><small>${money(d.price)} each · ${money(d.price * qty)}</small></div>
+          <div class="qty"><button type="button" data-change="${id}" data-delta="-1" aria-label="Remove one">−</button><span>${qty}</span><button type="button" data-change="${id}" data-delta="1" aria-label="Add one">+</button></div>
+        </div>`;
+      }).join("") : `<div class="empty"><span>🥡</span>Your basket is waiting for something delicious.</div>`;
+      document.getElementById("subtotal").textContent = money(subtotal);
+      document.getElementById("delivery").textContent = money(deliveryFee);
+      document.getElementById("total").textContent = money(subtotal + deliveryFee);
+      document.getElementById("placeOrder").disabled = !count;
+      document.querySelectorAll("[data-change]").forEach(btn => btn.addEventListener("click", () =>
+        changeQty(Number(btn.dataset.change), Number(btn.dataset.delta))));
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    document.getElementById("search").addEventListener("input", renderMenu);
+
+    document.getElementById("locateBtn").addEventListener("click", () => {
+      if (!navigator.geolocation) return showToast("Location is not available in this browser.");
+      navigator.geolocation.getCurrentPosition(position => {
+        destination = [position.coords.latitude, position.coords.longitude];
+        showToast("Delivery location set from your device.");
+        if (map && document.getElementById("tracking").classList.contains("show")) updateMapDestination();
+      }, () => showToast("Location permission was not granted. Enter your address instead."));
+    });
+
+    document.getElementById("checkoutForm").addEventListener("submit", event => {
+      event.preventDefault();
+      if (!Object.keys(cart).length) return;
+      const name = document.getElementById("customerName").value.trim();
+      const address = document.getElementById("address").value.trim();
+      if (!name || !address) return showToast("Please enter your name and delivery address.");
+
+      document.getElementById("tracking").classList.add("show");
+      document.getElementById("orderText").textContent = `Order for ${name} · ${Object.values(cart).reduce((a,b)=>a+b,0)} items`;
+      document.getElementById("destinationLabel").textContent = address.length > 24 ? address.slice(0, 22) + "…" : address;
+      document.getElementById("status").textContent = "Preparing your order";
+      showToast("Order placed! Your kitchen is getting started.");
+      initTracking();
+      document.getElementById("tracking").scrollIntoView({ behavior: "smooth", block: "start" });
+      cart = {};
+      renderCart();
+    });
+
+    function initTracking() {
+      if (!map) {
+        map = L.map("map", { scrollWheelZoom: false }).setView(destination, 14);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+      }
+      setTimeout(() => map.invalidateSize(), 150);
+      updateMapDestination();
+      courierIndex = 0;
+      if (trackingTimer) clearInterval(trackingTimer);
+      trackingTimer = setInterval(moveCourier, 3500);
+    }
+
+    function updateMapDestination() {
+      // Demo courier starts a short distance away from the entered delivery location.
+      const [lat, lng] = destination;
+      courierPath = [
+        [lat + 0.014, lng - 0.012],
+        [lat + 0.011, lng - 0.009],
+        [lat + 0.008, lng - 0.006],
+        [lat + 0.005, lng - 0.004],
+        [lat + 0.002, lng - 0.002],
+        [lat, lng]
+      ];
+      if (destinationMarker) map.removeLayer(destinationMarker);
+      if (courierMarker) map.removeLayer(courierMarker);
+      if (routeLine) map.removeLayer(routeLine);
+
+      destinationMarker = L.marker(destination).addTo(map).bindPopup("Delivery destination");
+      courierMarker = L.marker(courierPath[0], {
+        icon: L.divIcon({ className: "", html: '<div style="font-size:27px">🛵</div>', iconSize: [30,30], iconAnchor: [15,15] })
+      }).addTo(map).bindPopup("Courier location (demo)");
+      routeLine = L.polyline(courierPath, { color: "#e8884a", weight: 4, opacity: .8, dashArray: "7 8" }).addTo(map);
+      map.fitBounds(routeLine.getBounds().pad(.25));
+    }
+
+    function moveCourier() {
+      if (!courierPath || !courierMarker) return;
+      courierIndex++;
+      if (courierIndex >= courierPath.length) {
+        clearInterval(trackingTimer);
+        document.getElementById("status").textContent = "Delivered";
+        document.getElementById("eta").textContent = "Arrived";
+        return;
+      }
+      courierMarker.setLatLng(courierPath[courierIndex]);
+      const remaining = courierPath.length - courierIndex - 1;
+      document.getElementById("status").textContent = courierIndex < 2 ? "On the way" : "Almost there";
+      document.getElementById("eta").textContent = remaining ? `About ${remaining * 3} minutes` : "Arriving now";
+    }
+
+    renderCategories();
+    renderMenu();
+    renderCart();
+  </script>
+</body>
+</html>
